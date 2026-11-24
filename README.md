@@ -17,22 +17,7 @@ Dans une application basée sur l'**inversion de contrôle** (IoC), le développ
 
 ## 2. Architecture du projet
 
-Application en trois couches, dans le package de base `net.usfi` (bonne pratique : tous les packages descendent d'un même package de base, ce qui simplifie le scan de Spring).
-
-```
-inversion-injection-dependances/
-├── pom.xml                      # Maven, Java 21, Spring 6.2.3 (core, context, beans)
-├── config.txt                   # config de l'instanciation dynamique (racine du projet)
-├── README.md                    # ce compte rendu
-└── src/main/
-    ├── java/net/usfi/
-    │   ├── dao/            IDao, DaoImpl              (version base de données)
-    │   ├── ext/            DaoImplV2                  (extension : version capteur)
-    │   ├── metier/         IMetier, MetierImpl
-    │   └── presentation/   Pres1, PresNullPointer, Pres2, Pres2Setter,
-    │                       PresSpringXML, PresSpringAnnotation
-    └── resources/          config.xml                 (beans Spring, version XML)
-```
+![img.png](src/image/img.png)
 
 ## 3. Partie 1 — Réalisation
 
