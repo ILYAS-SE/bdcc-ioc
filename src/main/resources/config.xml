@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- Pour basculer vers la version capteur : remplacer par net.usfi.ext.DaoImplV2 -->
+    <bean id="d" class="net.usfi.dao.DaoImpl"/>
+
+    <!-- Injection via le SETTER (<property name="dao"> -> appelle setDao) -->
+    <bean id="metier" class="net.usfi.metier.MetierImpl">
+        <property name="dao" ref="d"/>
+    </bean>
+
+    <!-- Variante : injection via le CONSTRUCTEUR (remplacer le bean ci-dessus par celui-ci)
+    <bean id="metier" class="net.usfi.metier.MetierImpl">
+        <constructor-arg ref="d"/>
+    </bean>
+    -->
+</beans>

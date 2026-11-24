@@ -1,0 +1,2 @@
+net.usfi.dao.DaoImpl
+net.usfi.metier.MetierImpl
