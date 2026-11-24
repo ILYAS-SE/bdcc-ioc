@@ -25,26 +25,13 @@ Dans une application basée sur l'**inversion de contrôle** (IoC), le développ
 
 Le **concepteur** crée l'interface : il définit ce qui doit être implémenté.
 
-```java
-public interface IDao {
-    double getData();
-}
-```
+![mag1.png](src/image/mag1.png)
 
 ### Étape 2 — Implémentation de `IDao`
 
 Le **développeur** implémente le besoin. Ici, la « version base de données » : pas de vraie base, on affiche un message et on retourne une température.
 
-```java
-public class DaoImpl implements IDao {
-    @Override
-    public double getData() {
-        System.out.println("Version base de données");
-        double temperature = 23;
-        return temperature;
-    }
-}
-```
+![mag2.png](src/image/mag2.png)
 
 Une seconde implémentation (`DaoImplV2`, « version capteur », température 12) est ajoutée dans le package `ext` pour simuler une évolution demandée plus tard par le client.
 
@@ -52,34 +39,13 @@ Une seconde implémentation (`DaoImplV2`, « version capteur », température 12
 
 ### Étape 3 — Interface `IMetier` avec la méthode `calcul`
 
-```java
-public interface IMetier {
-    double calcul();
-}
-```
+![mag3.png](src/image/mag3.png)
 
 ### Étape 4 — Implémentation de `IMetier` avec couplage faible
 
 `MetierImpl` dépend de l'**interface** `IDao` et non d'une classe. L'attribut n'est **pas initialisé** (valeur `null` par défaut) : écrire `= new DaoImpl()` créerait un couplage fort.
 
-```java
-public class MetierImpl implements IMetier {
-    private IDao dao;                       // couplage faible, non initialisé
-
-    public MetierImpl() {}                  // pour l'injection via le setter
-    public MetierImpl(IDao dao) {           // pour l'injection via le constructeur
-        this.dao = dao;
-    }
-
-    @Override
-    public double calcul() {
-        double t = dao.getData();
-        return t * 20 * Math.PI / 2 * Math.cos(t);   // règle métier fictive
-    }
-
-    public void setDao(IDao dao) { this.dao = dao; }
-}
-```
+![mag4.png](src/image/mag4.png)
 
 Tant que `dao` n'est pas injecté, l'appel de `calcul()` provoque une **`NullPointerException`** (« dépendance non satisfaite », voir `PresNullPointer`) :
 
@@ -95,25 +61,11 @@ Deux moyens d'injecter : le **setter** (constructeur sans paramètres puis `setD
 
 #### a) Par instanciation statique (`Pres1`)
 
-```java
-DaoImpl d = new DaoImpl();
-MetierImpl metier = new MetierImpl();
-metier.setDao(d);                                   // injection via le setter
-System.out.println("Résultat = " + metier.calcul());
-
-MetierImpl metier2 = new MetierImpl(d);             // injection via le constructeur
-```
+![mag5.png](src/image/mag5.png)
 
 Sortie obtenue :
 
-```
-Version base de données
-[setter]       Résultat = -385.0071895219764
-Version base de données
-[constructeur] Résultat = -385.0071895219764
-Version capteur
-[capteur]      Résultat = 318.1254476947994
-```
+![ex1.png](src/image/ex1.png)
 
 **Analyse :**
 - Couche DAO : fermée à la modification (elle ne dépend d'aucune classe) et ouverte à l'extension (interface).
@@ -124,37 +76,17 @@ Version capteur
 
 Fichier `config.txt` (à la **racine** du projet, pas dans `src`) :
 
-```
-net.usfi.dao.DaoImpl
-net.usfi.metier.MetierImpl
-```
+![config.png](src/image/config.png)
 
-```java
-Scanner scanner = new Scanner(new File("config.txt"));
-
-String daoClassName = scanner.nextLine().trim();
-Class<?> cDao = Class.forName(daoClassName);                       // charge la classe en mémoire
-IDao dao = (IDao) cDao.getConstructor().newInstance();             // crée l'objet
-
-String metierClassName = scanner.nextLine().trim();
-Class<?> cMetier = Class.forName(metierClassName);
-IMetier metier = (IMetier) cMetier.getConstructor(IDao.class).newInstance(dao); // injection via constructeur
-```
+![mag6.png](src/image/mag6.png)
 
 Variante par le setter (`Pres2Setter`), via la réflexion :
 
-```java
-IMetier metier = (IMetier) cMetier.getConstructor().newInstance();
-Method setDao = cMetier.getMethod("setDao", IDao.class);
-setDao.invoke(metier, dao);          // équivalent dynamique de metier.setDao(dao)
-```
+![mag7.png](src/image/mag7.png)
 
 Sortie obtenue avec `config.txt` ci-dessus :
 
-```
-Version base de données
-Résultat = -385.0071895219764
-```
+![ex2.png](src/image/ex2.png)
 
 Pour basculer vers la version capteur, on modifie **uniquement** `config.txt` (`net.usfi.ext.DaoImplV2` en ligne 1), sans toucher au code :
 
@@ -173,42 +105,15 @@ Dépendances Maven (`pom.xml`) : `spring-core`, `spring-context`, `spring-beans`
 
 **Version XML** (`PresSpringXML`, fichier `src/main/resources/config.xml`) :
 
-```xml
-<bean id="d" class="net.usfi.dao.DaoImpl"/>
-<bean id="metier" class="net.usfi.metier.MetierImpl">
-    <property name="dao" ref="d"/>          <!-- appelle setDao(d) : injection via le setter -->
-</bean>
-```
+![xmlconf.png](src/image/xmlconf.png)
 
-```java
-ApplicationContext context = new ClassPathXmlApplicationContext("config.xml");
-IMetier metier = (IMetier) context.getBean("metier");   // par id (cast)
-IMetier metier2 = context.getBean(IMetier.class);       // par interface (sans cast)
-System.out.println("Résultat = " + metier.calcul());
-```
+![mag8.png](src/image/mag8.png)
 
 Au démarrage, Spring lit le XML, crée les objets (beans), les stocke dans son contexte (une map nom → objet) et fait l'injection. Pour injecter via le constructeur, on remplace `<property>` par `<constructor-arg ref="d"/>`. Pour passer à la version capteur, on remplace la classe du bean `d` par `net.usfi.ext.DaoImplV2`.
 
 **Version annotations** (`PresSpringAnnotation`) :
 
-```java
-@Component("d")
-public class DaoImpl implements IDao { ... }
-
-@Component("metier")
-public class MetierImpl implements IMetier {
-    @Autowired
-    public MetierImpl(@Qualifier("d") IDao dao) { this.dao = dao; }   // injection via constructeur
-    ...
-}
-```
-
-```java
-ApplicationContext context =
-    new AnnotationConfigApplicationContext("net.usfi.dao", "net.usfi.metier");
-IMetier metier = context.getBean(IMetier.class);
-System.out.println("Résultat = " + metier.calcul());
-```
+![mag9.png](src/image/mag9.png)
 
 Points importants :
 - `@Component` demande à Spring d'instancier la classe et de l'enregistrer comme bean ; `@Autowired` demande l'injection automatique (sur l'attribut ou sur le constructeur).
@@ -228,29 +133,3 @@ Points importants :
 ## 5. Conclusion
 
 Pour créer une application fermée à la modification et ouverte à l'extension, il faut (1) utiliser le **couplage faible** (dépendre des interfaces) et (2) faire l'**injection des dépendances**. Avec Spring, ce n'est plus le développeur mais le framework qui crée et contrôle les objets, d'où le nom d'**inversion de contrôle** : le développeur écrit le code métier, Spring gère le code technique. Dans la pratique, on préfère les **annotations** au XML, et l'injection par le **constructeur** à celle par le setter.
-
-## 6. Exécution
-
-Depuis IntelliJ : clic droit sur la classe de `presentation` → *Run*. Le dossier de travail doit être la racine du projet (nécessaire pour `config.txt`).
-
-En ligne de commande (JDK 21 + Maven) :
-
-```bash
-mvn compile
-mvn exec:java -Dexec.mainClass=net.usfi.presentation.Pres1
-mvn exec:java -Dexec.mainClass=net.usfi.presentation.Pres2
-mvn exec:java -Dexec.mainClass=net.usfi.presentation.PresSpringXML
-mvn exec:java -Dexec.mainClass=net.usfi.presentation.PresSpringAnnotation
-```
-
-## 7. Workflow Git demandé
-
-```bash
-git init
-git add .
-git commit -m "Initial commit : structure du projet"
-git branch -M main
-git remote add origin <URL_DU_REPOSITORY>
-git push -u origin main
-# puis un commit + push toutes les ~30 min, et un dernier commit en fin de séance
-```
